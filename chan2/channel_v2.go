@@ -1,4 +1,4 @@
-package main
+package chan2
 
 import (
 	"encoding/csv"
@@ -15,18 +15,18 @@ import (
 const numberOfThreads = 200
 
 // start function
-func mainChannel() {
+func MainChannel() {
 	startTime := time.Now().Unix()
 	var result [][]string
 	var cnt = 0
 	var outC = make(chan []string, 100)
-
+	var inC = make(chan []string, 100)
 	var wg = &sync.WaitGroup{}
 	// array of runner
 	var runner = make([]Parcer, numberOfThreads)
 	for i := 0; i < numberOfThreads; i++ {
 		runner[i] = new(outC, wg)
-		go runner[i].scrapeUrl()
+		go runner[i].scrapeUrl(inC)
 	}
 
 	file, err := os.Open("majestic_million.csv")
@@ -35,7 +35,6 @@ func mainChannel() {
 	}
 	defer file.Close()
 
-	i := 0
 	r := csv.NewReader(file)
 	if _, err := r.Read(); err != nil {
 		log.Fatalln(err)
@@ -45,8 +44,7 @@ func mainChannel() {
 	// possible to  write in  file in this thread
 	go func() {
 		cmp := 0
-		for {
-			l := <-outC
+		for l := range outC {
 			if len(l) == 0 {
 				cmp++
 				if cmp == numberOfThreads {
@@ -70,35 +68,14 @@ func mainChannel() {
 			break
 		}
 		cnt++
-		if cnt >= 10000 {
+		if cnt >= 1000 {
 			break
 		}
 		wg.Add(1)
-		isRun := false
-		// run  until find free thread
-		for !isRun {
-			// round robin balancer
-			for i < numberOfThreads {
-				select {
-				case runner[i].c <- row:
-					isRun = true
-				default:
-					isRun = false
-				}
-				i++
-				if isRun {
-					break
-				}
-			}
-			if i >= numberOfThreads {
-				i = 0
-			}
-		}
+		inC <- row
 	}
 	// finalize parsers threads
-	for i := 0; i < numberOfThreads; i++ {
-		runner[i].Finish()
-	}
+	close(inC)
 	wg.Wait()
 	// write result
 	fileO, err := os.Create("result.csv")
@@ -124,14 +101,9 @@ type Parcer struct {
 	wg     *sync.WaitGroup
 }
 
-func (p *Parcer) scrapeUrl() {
-	for {
-		url := <-p.c
-		if len(url) == 0 {
-			p.outC <- url
-			break
-		}
-		defer p.wg.Done()
+func (p *Parcer) scrapeUrl(c chan []string) {
+	defer p.wg.Done()
+	for url := range c {
 		if resp, err := p.client.Get("http://" + url[2]); err != nil {
 			//p.outC <- fmt.Sprintf("[REQUEST ERR ] %v " , err.Error())
 			fmt.Printf("[ERR] %v\n", err)
@@ -152,14 +124,7 @@ func new(o chan []string, w *sync.WaitGroup) Parcer {
 		c: make(chan []string, 5),
 		client: &http.Client{
 			// Parameters from requirement
-			Timeout: 5 * time.Second,
-			Transport: &http.Transport{
-				MaxConnsPerHost:       numberOfThreads,
-				MaxIdleConns:          numberOfThreads,
-				IdleConnTimeout:       5 * time.Second,
-				ResponseHeaderTimeout: 2 * time.Second,
-				DisableKeepAlives:     true,
-			},
+			Timeout: 10 * time.Second,
 		},
 		outC: o,
 		wg:   w,

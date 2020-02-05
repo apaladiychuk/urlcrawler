@@ -1,6 +1,10 @@
 package main
 
+import "./chan2"
+
 func main() {
-	mainChannel()
+	chan2.MainChannel()
+
+	//	mainChannel()
 	//alterMain()
 }

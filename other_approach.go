@@ -14,7 +14,7 @@ import (
 )
 
 func mainO() {
-	startTime := time.Now()
+	//startTime := time.Now()
 
 	var filePath = flag.String("f", "urls.txt", "Enter the full path to your text file of URLs. Default: input.txt")
 	var threads = flag.Int("g", 200, "Number of goroutines. Default:100")
@@ -75,7 +75,7 @@ func mainO() {
 
 	_ = f.Close()
 
-	fmt.Printf("%d", time.Now().Sub(startTime).Milliseconds())
+	fmt.Printf("%d", time.Now().Unix())
 	fmt.Scanf("h")
 
 }
