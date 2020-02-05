@@ -3,14 +3,16 @@ package main
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 )
 
-const numberOfThreads = 150
+const numberOfThreads = 200
 
 // start function
 func mainChannel() {
@@ -149,12 +151,12 @@ func new(o chan []string, w *sync.WaitGroup) Parcer {
 		c: make(chan []string, 5),
 		client: &http.Client{
 			// Parameters from requirement
-			Timeout: 10 * time.Second,
+			Timeout: 5 * time.Second,
 			Transport: &http.Transport{
 				MaxConnsPerHost:       numberOfThreads,
 				MaxIdleConns:          numberOfThreads,
-				IdleConnTimeout:       10 * time.Second,
-				ResponseHeaderTimeout: 5 * time.Second,
+				IdleConnTimeout:       5 * time.Second,
+				ResponseHeaderTimeout: 2 * time.Second,
 				DisableKeepAlives:     true,
 			},
 		},
